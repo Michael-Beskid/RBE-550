@@ -12,6 +12,7 @@ class Node:
         self.parent = parent  # previous node
 
 
+# Class for grid dimensions
 class gridSize:
     def __init__(self, rows, cols):
         self.rows = rows
@@ -49,6 +50,7 @@ def isValidNode(grid, gridSize, node, V):
 # Add valid, unvisited neighbors to queue
 def addNeighbors(node, nodeList, neighborOrder):
 
+    # Add neighboring squares to node list
     for order in neighborOrder:
         neighborNode = Node(node.row + order[0], node.col + order[1], None, node, node.goal)
         neighborNode.cost = calcCost(neighborNode)
@@ -90,6 +92,7 @@ def calcCost(node):
         return calcManhattanDistance(node)
     
 
+# General pathfinding solution for any search algorithm
 def findPath(grid, start, goal, nodeList, neighborOrder):
 
     path = []
@@ -125,6 +128,7 @@ def findPath(grid, start, goal, nodeList, neighborOrder):
     return found, path, steps
 
 
+# Breadth First Search
 def bfs(grid, start, goal):
     '''Return a path found by BFS alogirhm 
        and the number of steps it takes to find it.
@@ -150,11 +154,14 @@ def bfs(grid, start, goal):
     [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]
     '''
 
+    # Initialization
     Q = Queue()
     neighborOrder = [(0,1), (1,0), (0,-1), (-1,0)]
 
+    # Calculate path
     found, path, steps = findPath(grid, start, goal, Q, neighborOrder)
 
+    # Print results
     if found:
         print(f"It takes {steps} steps to find a path using BFS")
     else:
@@ -162,6 +169,7 @@ def bfs(grid, start, goal):
     return path, steps
 
 
+# Depth First Search
 def dfs(grid, start, goal):
     '''Return a path found by DFS alogirhm 
        and the number of steps it takes to find it.
@@ -187,17 +195,22 @@ def dfs(grid, start, goal):
     [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [3, 3], [3, 2], [3, 1]]
     '''
     
+    # Initialization
     S = Stack()
     neighborOrder = [(-1,0), (0,-1), (1,0), (0,1)]
 
+    # Calculate path
     found, path, steps = findPath(grid, start, goal, S, neighborOrder)
 
+    # Print results
     if found:
         print(f"It takes {steps} steps to find a path using DFS")
     else:
         print("No path found")
     return path, steps
 
+
+# A* (huersitic = Manhattan distance)
 def astar(grid, start, goal):
     '''Return a path found by A* alogirhm 
        and the number of steps it takes to find it.
@@ -222,16 +235,21 @@ def astar(grid, start, goal):
     >>> astar_path
     [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]
     '''
+
+    # Initialization
     PQ = PriorityQueueWithFunction(calcCost)
     neighborOrder = [(0,1), (1,0), (0,-1), (-1,0)]
 
+    # Calculate path
     found, path, steps = findPath(grid, start, goal, PQ, neighborOrder)
 
+    # Print results
     if found:
         print(f"It takes {steps} steps to find a path using A*")
     else:
         print("No path found")
     return path, steps
+
 
 # Doctest
 if __name__ == "__main__":
