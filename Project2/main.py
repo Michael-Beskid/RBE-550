@@ -1,15 +1,18 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import csv
+import os
 
 from search import dfs, bfs, astar
 
 # Load map, start and goal point.
-def load_map(file_path):
+def load_map(file_name):
     grid = []
     start = [0, 0]
     goal = [0, 0]
     # Load from the file
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(script_dir, file_name)
     with open(file_path, 'r') as map_file:
         reader = csv.reader(map_file)
         for i, row in enumerate(reader):
