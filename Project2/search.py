@@ -51,7 +51,7 @@ def addNeighbors(node, nodeList, neighborOrder):
 
     for order in neighborOrder:
         neighborNode = Node(node.row + order[0], node.col + order[1], None, node, node.goal)
-        neighborNode.cost = calcManhattanDistance(neighborNode)
+        neighborNode.cost = calcCost(neighborNode)
         nodeList.push(neighborNode)
 
     # return updated queue
@@ -82,6 +82,49 @@ def calcManhattanDistance(node):
     return abs(node.row - node.goal[0]) + abs(node.col - node.goal[1])
 
 
+# Compute cost for node
+def calcCost(node):
+    if node.parent != None:
+        return node.parent.cost + calcManhattanDistance(node)
+    else:
+        return calcManhattanDistance(node)
+    
+
+def findPath(grid, start, goal, nodeList, neighborOrder):
+
+    path = []
+    steps = 0
+    found = False
+    V = []
+
+    # get grid dimensions
+    gridSize = calcGridSize(grid)
+
+    # Add start node to queue
+    startNode = Node(start[0], start[1], 0, None, goal)
+    nodeList.push(startNode)
+
+    while not nodeList.isEmpty():
+
+        currNode = nodeList.pop()
+
+        if isValidNode(grid, gridSize, currNode, V):
+
+            V.append(currNode)
+
+            # break loop and calculate path if goal is reached
+            if isGoalNode(currNode):
+                path = calcPath(path, currNode)
+                steps = calcNumSteps(V, goal)
+                found = True
+                break
+            
+            # Add free space neighbors to queue
+            nodeList = addNeighbors(currNode, nodeList, neighborOrder)
+
+    return found, path, steps
+
+
 def bfs(grid, start, goal):
     '''Return a path found by BFS alogirhm 
        and the number of steps it takes to find it.
@@ -107,39 +150,10 @@ def bfs(grid, start, goal):
     [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]
     '''
 
-    path = []
-    steps = 0
-    found = False
-    
-    # Initialize queue
     Q = Queue()
-    V = []
     neighborOrder = [(0,1), (1,0), (0,-1), (-1,0)]
 
-    # get grid dimensions
-    gridSize = calcGridSize(grid)
-
-    # Add start node to queue
-    startNode = Node(start[0], start[1], None, None, goal)
-    Q.push(startNode)
-
-    while not Q.isEmpty():
-
-        currNode = Q.pop()
-
-        if isValidNode(grid, gridSize, currNode, V):
-
-            V.append(currNode)
-
-            # break loop and calculate path if goal is reached
-            if isGoalNode(currNode):
-                path = calcPath(path, currNode)
-                steps = calcNumSteps(V, goal)
-                found = True
-                break
-            
-            # Add free space neighbors to queue
-            Q = addNeighbors(currNode, Q, neighborOrder)
+    found, path, steps = findPath(grid, start, goal, Q, neighborOrder)
 
     if found:
         print(f"It takes {steps} steps to find a path using BFS")
@@ -172,39 +186,11 @@ def dfs(grid, start, goal):
     >>> dfs_path
     [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 3], [3, 3], [3, 2], [3, 1]]
     '''
-    path = []
-    steps = 0
-    found = False
     
-    # Initialize queue
     S = Stack()
-    V = []
     neighborOrder = [(-1,0), (0,-1), (1,0), (0,1)]
 
-    # get grid dimensions
-    gridSize = calcGridSize(grid)
-
-    # Add start node to queue
-    startNode = Node(start[0], start[1], None, None, goal)
-    S.push(startNode)
-
-    while not S.isEmpty():
-
-        currNode = S.pop()
-
-        if isValidNode(grid, gridSize, currNode, V):
-
-            V.append(currNode)
-
-            # break loop and calculate path if goal is reached
-            if isGoalNode(currNode):
-                path = calcPath(path, currNode)
-                steps = calcNumSteps(V, goal)
-                found = True
-                break
-            
-            # Add free space neighbors to queue
-            S = addNeighbors(currNode, S, neighborOrder)
+    found, path, steps = findPath(grid, start, goal, S, neighborOrder)
 
     if found:
         print(f"It takes {steps} steps to find a path using DFS")
@@ -236,40 +222,10 @@ def astar(grid, start, goal):
     >>> astar_path
     [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]
     '''
-    path = []
-    steps = 0
-    found = False
-    
-    # Initialize queue
-    PQ = PriorityQueueWithFunction(calcManhattanDistance)
-    V = []
+    PQ = PriorityQueueWithFunction(calcCost)
     neighborOrder = [(0,1), (1,0), (0,-1), (-1,0)]
 
-    # get grid dimensions
-    gridSize = calcGridSize(grid)
-
-    # Add start node to queue
-    startNode = Node(start[0], start[1], None, None, goal)
-    PQ.push(startNode)
-
-    while not PQ.isEmpty():
-
-        currNode = PQ.pop()
-
-        if isValidNode(grid, gridSize, currNode, V):
-
-            V.append(currNode)
-
-            # break loop and calculate path if goal is reached
-            if isGoalNode(currNode):
-                path = calcPath(path, currNode)
-                steps = calcNumSteps(V, goal)
-                found = True
-                break
-            
-            # Add free space neighbors to queue
-            PQ = addNeighbors(currNode, PQ, neighborOrder)
-
+    found, path, steps = findPath(grid, start, goal, PQ, neighborOrder)
 
     if found:
         print(f"It takes {steps} steps to find a path using A*")
