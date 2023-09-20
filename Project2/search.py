@@ -31,7 +31,7 @@ def isGoalNode(node):
 
 
 # Check is a neighboring square is a valid node
-def isValidNode(grid, gridSize, node, nodeList, V):
+def isValidNode(grid, gridSize, node, V):
     # Confirm that square lies within the grid
     if node.row >= 0 and node.row < gridSize.rows:
         if node.col >= 0 and node.col < gridSize.cols:
@@ -41,21 +41,17 @@ def isValidNode(grid, gridSize, node, nodeList, V):
                 for visitedNode in V:
                     if visitedNode.row == node.row and visitedNode.col == node.col:
                         return False
-                for discoveredNode in nodeList.list:
-                    if discoveredNode.row == node.row and discoveredNode.col == node.col:
-                        return False
                 # Return true if new node passes all checks
                 return True
     return False
 
 
 # Add valid, unvisited neighbors to queue
-def addNeighbors(grid, gridSize, node, nodeList, V, neighborOrder):
+def addNeighbors(node, nodeList, neighborOrder):
 
     for order in neighborOrder:
         neighborNode = Node(node.row + order[0], node.col + order[1], None, node, node.goal)
-        if isValidNode(grid, gridSize, neighborNode, nodeList, V):
-            nodeList.push(neighborNode)
+        nodeList.push(neighborNode)
 
     # return updated queue
     return nodeList
@@ -68,14 +64,6 @@ def calcPath(path, node):
         calcPath(path, node.parent)
     else:
         path.insert(0,[node.row, node.col])
-    return path
-
-
-# Create list of nodes in path from start to goal but dumb
-def calcPath2(V):
-    path = []
-    for visitedNode in V:
-        path.insert(len(V)-1,[visitedNode.row, visitedNode.col])
     return path
 
 
@@ -132,18 +120,20 @@ def bfs(grid, start, goal):
     while len(Q.list) != 0:
 
         currNode = Q.pop()
-        V.append(currNode)
 
-        # break loop and calculate path if goal is reached
-        if isGoalNode(currNode):
-            path = calcPath(path, currNode)
-            steps = calcNumSteps(V, goal)
-            found = True
-            break
-        
-        # Add free space neighbors to queue
-        # Remember to add bounds to this guy for grid size
-        Q = addNeighbors(grid, gridSize, currNode, Q, V, neighborOrder)
+        if isValidNode(grid, gridSize, currNode, V):
+
+            V.append(currNode)
+
+            # break loop and calculate path if goal is reached
+            if isGoalNode(currNode):
+                path = calcPath(path, currNode)
+                steps = calcNumSteps(V, goal)
+                found = True
+                break
+            
+            # Add free space neighbors to queue
+            Q = addNeighbors(currNode, Q, neighborOrder)
 
     if found:
         print(f"It takes {steps} steps to find a path using BFS")
@@ -195,18 +185,20 @@ def dfs(grid, start, goal):
     while not S.isEmpty():
 
         currNode = S.pop()
-        V.append(currNode)
 
-        # break loop and calculate path if goal is reached
-        if isGoalNode(currNode):
-            path = calcPath2(V)
-            steps = calcNumSteps(V, goal)
-            found = True
-            break
-        
-        # Add free space neighbors to queue
-        # Remember to add bounds to this guy for grid size
-        S = addNeighbors(grid, gridSize, currNode, S, V, neighborOrder)
+        if isValidNode(grid, gridSize, currNode, V):
+
+            V.append(currNode)
+
+            # break loop and calculate path if goal is reached
+            if isGoalNode(currNode):
+                path = calcPath(path, currNode)
+                steps = calcNumSteps(V, goal)
+                found = True
+                break
+            
+            # Add free space neighbors to queue
+            S = addNeighbors(currNode, S, neighborOrder)
 
     if found:
         print(f"It takes {steps} steps to find a path using DFS")
