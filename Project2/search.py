@@ -51,6 +51,7 @@ def addNeighbors(node, nodeList, neighborOrder):
 
     for order in neighborOrder:
         neighborNode = Node(node.row + order[0], node.col + order[1], None, node, node.goal)
+        neighborNode.cost = calcManhattanDistance(neighborNode)
         nodeList.push(neighborNode)
 
     # return updated queue
@@ -74,6 +75,11 @@ def calcNumSteps(V, goal):
             return V.index(visitedNode) + 1
     else:
         return -1
+    
+
+# Compute Manhattan distance between a node and the goal
+def calcManhattanDistance(node):
+    return abs(node.row - node.goal[0]) + abs(node.col - node.goal[1])
 
 
 def bfs(grid, start, goal):
@@ -117,7 +123,7 @@ def bfs(grid, start, goal):
     startNode = Node(start[0], start[1], None, None, goal)
     Q.push(startNode)
 
-    while len(Q.list) != 0:
+    while not Q.isEmpty():
 
         currNode = Q.pop()
 
@@ -230,10 +236,40 @@ def astar(grid, start, goal):
     >>> astar_path
     [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1]]
     '''
-    ### YOUR CODE HERE ###
     path = []
     steps = 0
     found = False
+    
+    # Initialize queue
+    PQ = PriorityQueueWithFunction(calcManhattanDistance)
+    V = []
+    neighborOrder = [(0,1), (1,0), (0,-1), (-1,0)]
+
+    # get grid dimensions
+    gridSize = calcGridSize(grid)
+
+    # Add start node to queue
+    startNode = Node(start[0], start[1], None, None, goal)
+    PQ.push(startNode)
+
+    while not PQ.isEmpty():
+
+        currNode = PQ.pop()
+
+        if isValidNode(grid, gridSize, currNode, V):
+
+            V.append(currNode)
+
+            # break loop and calculate path if goal is reached
+            if isGoalNode(currNode):
+                path = calcPath(path, currNode)
+                steps = calcNumSteps(V, goal)
+                found = True
+                break
+            
+            # Add free space neighbors to queue
+            PQ = addNeighbors(currNode, PQ, neighborOrder)
+
 
     if found:
         print(f"It takes {steps} steps to find a path using A*")
