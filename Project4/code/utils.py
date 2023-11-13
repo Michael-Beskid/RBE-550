@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
@@ -124,3 +125,10 @@ def is_intersecting(L1, L2):
             if point:
                 return True
     return False
+
+
+def rotate_about_origin(x,y,theta):
+    newX = x * math.cos(theta) - y * math.sin(theta)
+    newY = x * math.sin(theta) + y * math.cos(theta)
+    return(newX, newY)
+

@@ -88,6 +88,18 @@ class RRT(SamplingMethod):
         # Use kdtree to find the neighbors within neighbor size
         _, ind = self.kdtree.query(point)
         return self.samples[ind]
+    
+    def get_next_nearest_node(self, point):
+        """Find the nearest node in self.samples from the new point
+        arguments:
+            point - the new point in configuration space
+
+        return:
+            the nearest node in self.samples
+        """
+        # Use kdtree to find the neighbors within neighbor size
+        _, indices = self.kdtree.query(point, 2)
+        return self.samples[indices[1]]
 
     def extend(self, extension_d, goal_bias=0.05):
         """Extend a new node from the current tree
@@ -188,7 +200,7 @@ class RRT(SamplingMethod):
 
         return path[::-1], cost
 
-    def get_neighbors(self, new_node):
+    def get_neighbors(self, new_node, size):
         """Get the neighbors within the neighbor distance from the node
         arguments:
             new_node - a new node
@@ -197,8 +209,13 @@ class RRT(SamplingMethod):
         return:
             neighbors - list of neighbors within the neighbor distance
         """
-        ### YOUR CODE HERE ###
-        return [self.samples[0]] 
+    
+        indices = self.kdtree.query_ball_point(new_node.config, size)
+        neighbors = []
+        for n in range(len(indices)):
+            neighbors.append(self.samples[indices[n]])
+    
+        return neighbors
 
     def rewire(self, new_node, neighbors):
         """Rewire the new node and all its neighbors
@@ -210,7 +227,41 @@ class RRT(SamplingMethod):
         will give least cost.
         Rewire all the other neighbor nodes.
         """
-        ### YOUR CODE HERE ###
+        # Rewire new node
+        for neighbor in neighbors:
+            current_cost = self.get_total_cost(new_node)
+            distance = self.robot.distance(new_node.config, neighbor.config)
+            new_cost = self.get_total_cost(neighbor) + distance
+            if new_cost < current_cost:
+                if not self.check_collision(new_node.config, neighbor.config):
+                    new_node.parent = neighbor
+                    new_node.cost = distance
+                    self.update_kdtree()
+
+        # Rewire neighbors
+
+        for neighbor in neighbors:
+            current_cost = self.get_total_cost(neighbor)
+            distance = self.robot.distance(neighbor.config, new_node.config)
+            new_cost = self.get_total_cost(new_node) + distance
+            if new_cost < current_cost:
+                if not self.check_collision(new_node.config, neighbor.config):
+                    neighbor.parent = new_node
+                    neighbor.cost = distance
+                    self.update_kdtree()
+
+
+    def get_total_cost(self, node):
+
+        cost = node.cost
+        curr_node = node
+
+        while (curr_node.parent != None):
+            curr_node = curr_node.parent
+            cost += curr_node.cost
+
+        return cost
+    
         
     def RRT(self):
         """RRT search function
@@ -258,7 +309,7 @@ class RRT(SamplingMethod):
 
             # Rewire the new node and its neighbors
             if new_node is not None:
-                neighbors = self.get_neighbors(new_node)
+                neighbors = self.get_neighbors(new_node, 10)
                 self.rewire(new_node, neighbors)
 
             # If goal is not found, try to connect new node to goal

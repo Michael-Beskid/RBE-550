@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import matplotlib.animation as manimation
 
-from utils import endpoints_to_edges, angle_diff, interpolate_angle
-from utils import is_in_polygon, is_intersecting
+from utils import endpoints_to_edges, angle_diff, interpolate_angle, wrap_to_pi
+from utils import is_in_polygon, is_intersecting, rotate_about_origin
 
 
 class Robot:
@@ -77,19 +77,23 @@ class Robot:
             True if colliding with obstacles
         """
         # Get the edges of the robot for collision checking
-        robot_endpoint = self.forward_kinematics(config)[-1]
+        robot_endpoints = self.forward_kinematics(config)
         robot_edges = self.get_edges(config)
 
-        # Check if the robot endpoint is outside the map
-        if not is_in_polygon(robot_endpoint, map_corners):
-            return True
+        # Check if any robot endpoint is outside the map
+        for endpoint in robot_endpoints:
+            if not is_in_polygon(endpoint, map_corners):
+                return True
 
         # Check if the robot endpoint is inside any obstacle
         for obstacle in obstacles:
-            if is_in_polygon(robot_endpoint, obstacle):
-                return True
+            for endpoint in robot_endpoints:
+                if is_in_polygon(endpoint, obstacle):
+                    return True
 
-        ### YOUR CODE HERE ###
+        # Check if robot edges intersect any obstacle edges
+        if is_intersecting(robot_edges, obstacle_edges):
+            return True
 
         return False
 
@@ -173,16 +177,33 @@ class OmnidirectionalRobot(Robot):
         x, y, theta = config
         endpoints = np.zeros((5, 2))
 
-        ### YOUR CODE HERE ###
+        # Add center point to end of list of endpoints
+        center = [x,y]
+        endpoints[4] = center
 
+        # Compute rectangle corners at origin
+        corners_origin = [[self.width/2, self.height/2], [-self.width/2, self.height/2], [-self.width/2, -self.height/2], [self.width/2, -self.height/2]]
+
+        # Add corners to list of endpoints
+        for n in range(4):
+            # rotate corners about origin by theta
+            (newX, newY) = rotate_about_origin(corners_origin[n][0], corners_origin[n][1], theta)
+            # translate corners by (x,y)
+            corner = [x + newX, y + newY]
+            # add to list
+            endpoints[n] = corner
+
+        # Return list of endpoints
         return endpoints
 
     def get_edges(self, config):
         """Compute the edges of the robot given a configuration"""
-        # Get the 4 corner coordinates
 
-        ### YOUR CODE HERE ###
-        return []
+        # Get the 4 corner coordinates
+        corners = self.forward_kinematics(config)[:4]
+
+        # Return list of edges
+        return endpoints_to_edges(corners, True)
 
     def distance(self, config1, config2):
         """Calculate the euclidean distance between two configurations
@@ -194,8 +215,10 @@ class OmnidirectionalRobot(Robot):
             distance in R^2 x S^1 space
         """
 
-        ### YOUR CODE HERE ###
-        return 0
+        x_diff = config1[0] - config2[0]
+        y_diff = config1[1] - config2[1]
+        theta_diff = wrap_to_pi(config1[2] - config2[2])
+        return np.sqrt(x_diff**2 + y_diff**2 + theta_diff**2)
     
     def interpolate(self, config1, config2, num=5):
         """Interpolate between two configurations
@@ -206,8 +229,12 @@ class OmnidirectionalRobot(Robot):
             list with num number of configs from linear interploation in R^2 x S^1 space
         """
 
-        ### YOUR CODE HERE ###
-        return [] 
+        configs_between = zip(
+            np.linspace(config1[0], config2[0], num),
+            np.linspace(config1[1], config2[1], num),
+            interpolate_angle(config1[2], config2[2], num)
+        )
+        return configs_between
 
     def draw_robot(self, ax, config, edgecolor="b", facecolor="pink"):
         # compute corners and draw rectangle
@@ -246,11 +273,19 @@ class KinematicChain(Robot):
         """
         # Initialize the starting point as the fixed base
         joint_positions = [self.base]
-        start_point = np.array(self.base)
-        angle = 0
 
-        # Compute the end points of each joint based on the configuration
-        ### YOUR CODE HERE ###
+        # Add all joint positions to list
+        for n in range(self.num_joints):
+            # Compute angle
+            angle = 0
+            for j in range(n+1):
+                angle += config[j]
+            # Compute link end point with respect to origin
+            (newX, newY) = rotate_about_origin(self.link_lengths[n], 0, angle)
+            # Translate link from origin to previous link endpoint
+            new_joint_position = [joint_positions[n][0] + newX, joint_positions[n][1] + newY]
+            # Add to list
+            joint_positions.append(new_joint_position)
 
         return joint_positions
 
@@ -267,8 +302,11 @@ class KinematicChain(Robot):
             len(config) == self.num_joints
         ), "Configuration should match the number of joints"
 
-        ### YOUR CODE HERE ###
-        return [] 
+        # Get the joint positions
+        joint_positions = self.forward_kinematics(config)
+
+        # Return list of edges
+        return endpoints_to_edges(joint_positions)
 
     def distance(self, config1, config2):
         """Calculate the euclidean distance between two configurations
@@ -279,8 +317,10 @@ class KinematicChain(Robot):
         return:
             A Euclidean distance in S^1 x S^1 x ... x S^1 space
         """
-        ### YOUR CODE HERE ###
-        return 0 
+        sum = 0
+        for n in range(self.num_joints):
+            sum += wrap_to_pi(config1[n] - config2[n])**2
+        return np.sqrt(sum)
 
     def interpolate(self, config1, config2, num=10):
         """Interpolate between two configurations
@@ -289,12 +329,24 @@ class KinematicChain(Robot):
             p2 - config2, [joint1, joint2, joint3, ..., jointn]
 
         return:
-            A Euclidean distance in 
             list with num number of configs from linear interploation in S^1 x S^1 x ... x S^1 space.
         """
 
-        ### YOUR CODE HERE ###
-        return [] 
+        joint_interpolations = []
+
+        for n in range(self.num_joints):
+            joint_interpolations.append(interpolate_angle(config1[n], config2[n], num))
+
+        configs_between = []
+
+        for j in range(num):
+            config = []
+            for k in range(self.num_joints):
+                config.append(joint_interpolations[k][j])
+            configs_between.append(config)
+        
+        return configs_between
+    
 
     def draw_robot(self, ax, config, edgecolor="b", facecolor="black"):
         # compute joint positions and draw lines

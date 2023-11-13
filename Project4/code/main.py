@@ -15,22 +15,22 @@ if __name__ == "__main__":
     map_2d = Map2D("maps/map.csv")
 
     # Define the robot with start and goal configurations
-    robot = PointRobot()
-    start = (20, 20)
-    goal = (80, 80)
+    #robot = PointRobot()
+    #start = (20, 20)
+    #goal = (80, 80)
     #robot = OmnidirectionalRobot(width=2.5, height=5)
     #start = (20, 20, 0)
     #goal = (80, 80, np.pi / 2)
-    #robot = KinematicChain(link_lengths=[15, 15, 15, 15], base=[50, 15])
-    #start = (3, -0.1, -0.5, -0.5)
-    #goal = (2, -0.4, -0.3, -0.1)
+    robot = KinematicChain(link_lengths=[15, 15, 15, 15], base=[50, 15])
+    start = (3, -0.1, -0.5, -0.5)
+    goal = (2, -0.4, -0.3, -0.1)
 
     # select the planner method
     # for the pointrobot and omnidirectionalrobot
-    method = PRM(sampling_method="uniform", n_configs=300, kdtree_d=10)
+    # method = PRM(sampling_method="uniform", n_configs=300, kdtree_d=10)
     # method = PRM(sampling_method="gaussian", n_configs=300, kdtree_d=10)
     # method = PRM(sampling_method="bridge", n_configs=300, kdtree_d=10)
-    # method =  RRT(sampling_method="RRT", n_configs=300, kdtree_d=10)
+    # method = RRT(sampling_method="RRT", n_configs=300, kdtree_d=10)
     # method = RRT(sampling_method="RRT_star", n_configs=300, kdtree_d=10)
     # method = RRT(sampling_method="Informed_RRT_star", n_configs=300, kdtree_d=10)
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # method = PRM(sampling_method="gaussian", n_configs=200, kdtree_d=np.pi)
     # method = PRM(sampling_method="bridge", n_configs=200, kdtree_d=np.pi)
     # method = RRT(sampling_method="RRT", n_configs=300, kdtree_d=np.pi)
-    # method = RRT(sampling_method="RRT_star", n_configs=300, kdtree_d=np.pi)
+    method = RRT(sampling_method="RRT_star", n_configs=300, kdtree_d=np.pi)
     # method = RRT(sampling_method="Informed_RRT_star", n_configs=300, kdtree_d=np.pi)
 
     # Initialize the planner
