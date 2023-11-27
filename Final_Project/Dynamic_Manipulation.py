@@ -12,7 +12,7 @@ robot = Robot([0.5, 0.5], [0, 0], [1, 1]) # Generic 2-link manipulator
 torque_vector = [0, 0]
 start_delay = 1000 # milliseconds
 timestep = 50 # milliseconds
-num_iterations = 30
+num_iterations = 100
 
 def main():
     # Show robot

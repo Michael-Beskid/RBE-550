@@ -36,9 +36,9 @@ class Robot:
 
     # Calculate the mass matrix
     def calc_mass_matrix(self):
-        self.M[0][0] = self.link_masses[0]*self.link_lengths[0]**2 + self.link_masses[1]*(self.link_lengths[0]**2 + 2*self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1] + self.link_lengths[1]**2))
-        self.M[0][1] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1] + self.link_lengths[1]**2))
-        self.M[1][0] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1] + self.link_lengths[1]**2))
+        self.M[0][0] = self.link_masses[0]*self.link_lengths[0]**2 + self.link_masses[1]*(self.link_lengths[0]**2 + 2*self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
+        self.M[0][1] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
+        self.M[1][0] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
         self.M[1][1] = self.link_masses[1]*self.link_lengths[1]**2
 
 
