@@ -12,12 +12,13 @@ robot = Robot([0.5, 0.5], [0, 0], [1, 1]) # Generic 2-link manipulator
 torque_vector = [0, 0]
 start_delay = 1000 # milliseconds
 timestep = 50 # milliseconds
+num_iterations = 30
 
 def main():
     # Show robot
     robot.visualize(1000)
 
-    for x in range(30):
+    for x in range(num_iterations):
         # Simulate robot
         joint_angles, joint_velocities = robot.fwd_dyn(torque_vector, timestep)
 
