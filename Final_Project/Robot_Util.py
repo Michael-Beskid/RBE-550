@@ -75,12 +75,15 @@ class Robot:
         return self.joint_angles, self.joint_velocities
 
 
-    def visualize(self):
+    def visualize(self, timestep):
         # Clear the plot
         ax.clear()
         
         # Starting point
         points = np.array([[0, 0]])
+
+        # Link plot styles
+        styles = ['bo-', 'ro-', 'go-']
 
         # Iterate through each link and joint angle
         for i in range(len(self.link_lengths)):
@@ -94,7 +97,7 @@ class Robot:
             points = np.vstack([points, [x, y]])
 
             # Plot the manipulator link
-            ax.plot([points[i, 0], points[i + 1, 0]], [points[i, 1], points[i + 1, 1]], 'bo-')
+            ax.plot([points[i, 0], points[i + 1, 0]], [points[i, 1], points[i + 1, 1]], styles[i])
 
         # Plot settings
         ax.set_title('Planar Serial Manipulator')
@@ -106,4 +109,4 @@ class Robot:
         plt.show(block=False)
         # plt.savefig('manipulator_plot.png')
 
-        plt.pause(0.1)
+        plt.pause(timestep * 0.001)
