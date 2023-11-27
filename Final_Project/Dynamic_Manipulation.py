@@ -4,15 +4,18 @@ import time
 
 
 ## Manipulator Configuration - link lengths, joint angles, link masses
-#robot = Robot([10, 10, 10], [np.pi/6, np.pi/6, -np.pi/4], [1, 1, 1]) # Generic 3-link manipulator
-robot = Robot([0.5, 0.5], [0, 0], [1, 1]) # Generic 2-link manipulator
+link_lengths = [1,1]
+initial_angles = [0,0]
+link_masses = [1,1]
 
+## Create manipulator
+robot = Robot(link_lengths, initial_angles, link_masses) # Generic 2-link manipulator
 
 ## Simulation Parameters
-torque_vector = [0, 0]
+torque_vector = [0,0]
 start_delay = 1000 # milliseconds
 timestep = 50 # milliseconds
-num_iterations = 100
+num_iterations = 50
 
 def main():
     # Show robot
