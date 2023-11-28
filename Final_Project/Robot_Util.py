@@ -6,26 +6,27 @@ ax.set_aspect('equal')
 
 
 class Robot:
-    def __init__(self, link_lengths, joint_angles, link_masses):
+    def __init__(self, link_lengths, init_angles, init_velocities, link_masses):
 
         self.link_lengths = link_lengths
         self.num_links = len(link_lengths)
 
         self.joint_angles = np.zeros([self.num_links,1])
-        self.joint_angles[0] = joint_angles[0]
-        self.joint_angles[1] = joint_angles[1]
         self.joint_velocities = np.zeros([self.num_links,1])
         self.joint_accelerations = np.zeros([self.num_links,1])
+        for i in range(self.num_links):
+            self.joint_angles[i] = init_angles[i]
+            self.joint_velocities[i] = init_velocities[i]
 
         self.link_masses = link_masses
 
-        self.M = np.zeros([2, 2]) # Compute mass matrix
+        self.M = np.zeros([self.num_links, self.num_links]) # Compute mass matrix
         self.calc_mass_matrix()
 
-        self.C = np.zeros([2, 1]) # Compute Coriolis matrix
+        self.C = np.zeros([self.num_links, 1]) # Compute Coriolis matrix
         self.calc_coriolis_matrix()
 
-        self.G = np.zeros([2, 1]) # Compute gravity matrix
+        self.G = np.zeros([self.num_links, 1]) # Compute gravity matrix
         self.calc_gravity_matrix()
 
         # Set plot limits to max extension length of manipulator
@@ -36,23 +37,50 @@ class Robot:
 
     # Calculate the mass matrix
     def calc_mass_matrix(self):
-        self.M[0][0] = self.link_masses[0]*self.link_lengths[0]**2 + self.link_masses[1]*(self.link_lengths[0]**2 + 2*self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
-        self.M[0][1] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
-        self.M[1][0] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
-        self.M[1][1] = self.link_masses[1]*self.link_lengths[1]**2
+        if self.num_links == 1:
+            self.M[0] = self.link_masses[0]*self.link_lengths[0]**2
+        if self.num_links == 2:
+            self.M[0][0] = self.link_masses[0]*self.link_lengths[0]**2 + self.link_masses[1]*(self.link_lengths[0]**2 + 2*self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
+            self.M[0][1] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
+            self.M[1][0] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
+            self.M[1][1] = self.link_masses[1]*self.link_lengths[1]**2
+        if self.num_links == 3:
+            self.M[0][0] = 0
+            self.M[0][1] = 0
+            self.M[0][2] = 0
+            self.M[1][0] = 0
+            self.M[1][1] = 0
+            self.M[1][2] = 0
+            self.M[2][0] = 0
+            self.M[2][1] = 0
+            self.M[2][2] = 0
 
 
     # Calculate the Coriolis matrix
     def calc_coriolis_matrix(self):
-        self.C[0] = -self.link_masses[1]*self.link_lengths[0]*self.link_lengths[1]*np.sin(self.joint_angles[1])*(2*self.joint_velocities[0]*self.joint_velocities[1] + self.joint_velocities[1]**2)
-        self.C[1] = self.link_masses[1]*self.link_lengths[0]*self.link_lengths[1]*self.joint_velocities[0]**2*np.sin(self.joint_angles[1])
+        if self.num_links == 1:
+            self.C[0] = 0
+        if self.num_links == 2:
+            self.C[0] = -self.link_masses[1]*self.link_lengths[0]*self.link_lengths[1]*np.sin(self.joint_angles[1])*(2*self.joint_velocities[0]*self.joint_velocities[1] + self.joint_velocities[1]**2)
+            self.C[1] = self.link_masses[1]*self.link_lengths[0]*self.link_lengths[1]*self.joint_velocities[0]**2*np.sin(self.joint_angles[1])
+        if self.num_links == 3:
+            self.C[0] = 0
+            self.C[1] = 0
+            self.C[2] = 0
 
 
     # Calculate the gravity matrix
     def calc_gravity_matrix(self):
         g = 9.81
-        self.G[0] = (self.link_masses[0] + self.link_masses[1])*self.link_lengths[0]*g*np.cos(self.joint_angles[0]) + self.link_masses[1]*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])
-        self.G[1] = self.link_masses[1]*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])
+        if self.num_links == 1:
+            self.G[0] = self.link_masses[0]*self.link_lengths[0]*g*np.cos(self.joint_angles[0])
+        if self.num_links == 2:
+            self.G[0] = (self.link_masses[0] + self.link_masses[1])*self.link_lengths[0]*g*np.cos(self.joint_angles[0]) + self.link_masses[1]*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])
+            self.G[1] = self.link_masses[1]*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])
+        if self.num_links == 3:
+            self.G[0] = 0
+            self.G[1] = 0
+            self.G[2] = 0
 
     
     # Compute joint accelerations from joint positions, joint velocities, and torques
@@ -65,9 +93,9 @@ class Robot:
 
     def fwd_dyn(self, input_vector, time_steps):
         time_step = 0.001
-        joint_torques = np.zeros([2,1])
-        joint_torques[0] = input_vector[0]
-        joint_torques[1] = input_vector[1]
+        joint_torques = np.zeros([self.num_links,1])
+        for i in range(self.num_links):
+            joint_torques[i] = input_vector[i]
         for x in range(time_steps):
             self.calc_joint_accel(joint_torques)
             self.joint_angles = self.joint_angles + self.joint_velocities * time_step
