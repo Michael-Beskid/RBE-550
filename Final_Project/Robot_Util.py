@@ -45,15 +45,15 @@ class Robot:
             self.M[1][0] = self.link_masses[1]*(self.link_lengths[0]*self.link_lengths[1]*np.cos(self.joint_angles[1]) + self.link_lengths[1]**2)
             self.M[1][1] = self.link_masses[1]*self.link_lengths[1]**2
         if self.num_links == 3:
-            self.M[0][0] = 0
-            self.M[0][1] = 0
-            self.M[0][2] = 0
-            self.M[1][0] = 0
-            self.M[1][1] = 0
-            self.M[1][2] = 0
-            self.M[2][0] = 0
-            self.M[2][1] = 0
-            self.M[2][2] = 0
+            self.M[0][0] = 0 # TBD
+            self.M[0][1] = 0 # TBD
+            self.M[0][2] = 0 # TBD
+            self.M[1][0] = 0 # TBD
+            self.M[1][1] = self.link_masses[1]*self.link_lengths[1]**2 + self.link_masses[2]*(self.link_lengths[1]**2 + 2*self.link_lengths[1]*self.link_lengths[2]*np.cos(self.joint_angles[2]) + self.link_lengths[2]**2)
+            self.M[1][2] = self.link_masses[2]*(self.link_lengths[1]*self.link_lengths[2]*np.cos(self.joint_angles[2]) + self.link_lengths[2]**2)
+            self.M[2][0] = 0 # TBD
+            self.M[2][1] = self.link_masses[2]*(self.link_lengths[1]*self.link_lengths[2]*np.cos(self.joint_angles[2]) + self.link_lengths[2]**2)
+            self.M[2][2] = self.link_masses[2]*self.link_lengths[2]**2
 
 
     # Calculate the Coriolis matrix
@@ -64,9 +64,9 @@ class Robot:
             self.C[0] = -self.link_masses[1]*self.link_lengths[0]*self.link_lengths[1]*np.sin(self.joint_angles[1])*(2*self.joint_velocities[0]*self.joint_velocities[1] + self.joint_velocities[1]**2)
             self.C[1] = self.link_masses[1]*self.link_lengths[0]*self.link_lengths[1]*self.joint_velocities[0]**2*np.sin(self.joint_angles[1])
         if self.num_links == 3:
-            self.C[0] = 0
-            self.C[1] = 0
-            self.C[2] = 0
+            self.C[0] = 0 # TBD
+            self.C[1] = 0 # TBD
+            self.C[2] = 0 # TBD
 
 
     # Calculate the gravity matrix
@@ -78,9 +78,9 @@ class Robot:
             self.G[0] = (self.link_masses[0] + self.link_masses[1])*self.link_lengths[0]*g*np.cos(self.joint_angles[0]) + self.link_masses[1]*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])
             self.G[1] = self.link_masses[1]*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])
         if self.num_links == 3:
-            self.G[0] = 0
-            self.G[1] = 0
-            self.G[2] = 0
+            self.G[0] = (self.link_masses[0] + self.link_masses[1] + self.link_masses[2])*self.link_lengths[0]*g*np.cos(self.joint_angles[0]) + (self.link_masses[1] + self.link_masses[2])*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1]) + self.link_masses[2]*g*self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2])
+            self.G[1] = (self.link_masses[1] + self.link_masses[2])*g*self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1]) + self.link_masses[2]*g*self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2])
+            self.G[2] = self.link_masses[2]*g*self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2])
 
     
     # Compute joint accelerations from joint positions, joint velocities, and torques
