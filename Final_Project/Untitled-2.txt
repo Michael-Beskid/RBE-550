@@ -1,0 +1,23 @@
+M Matrix:
+    Joint 1:
+        theta1_dd: 
+        theta2_dd: 
+        theta3_dd: 
+    Joint 2:
+        theta1_dd: 
+        theta2_dd: 
+        theta3_dd: 
+    Joint 3:
+        theta1_dd: 
+        theta2_dd: 
+        theta3_dd: 
+
+C Matrix:
+    Joint 1: 
+    Joint 2: 
+    Joint 3: 
+
+G Matrix:
+    Joint 1: 
+    Joint 2: 
+    Joint 3: L3*m3*cos(theta1(t) + theta2(t) + theta3(t))*g
