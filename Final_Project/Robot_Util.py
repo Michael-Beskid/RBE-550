@@ -1,10 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from Utils import interpolate_angle, is_in_polygon, is_intersecting, endpoints_to_edges, rotate_about_origin
 
+
+# Parameters
+fwd_dyn_time_step = 0.001
+joint_velocity_limit = 10 # CHANGE THIS TO A REAL VALUE THAT IS REASONABLE
+
+
+# Initialize figure for animation
 fig, ax = plt.subplots()
 ax.set_aspect('equal')
 
 
+# Robot class for n-link planar manipulator (n = [1, 3])
 class Robot:
     def __init__(self, link_lengths, init_angles, init_velocities, link_masses):
 
@@ -91,19 +101,113 @@ class Robot:
         self.joint_accelerations = np.matmul(np.linalg.inv(self.M), joint_torques - self.C - self.G)
     
 
+    # Use forward dynamics to calculate the robot state from an initial state, torque input vector, and time step
     def fwd_dyn(self, input_vector, time_steps):
-        time_step = 0.001
         joint_torques = np.zeros([self.num_links,1])
         for i in range(self.num_links):
             joint_torques[i] = input_vector[i]
         for x in range(time_steps):
             self.calc_joint_accel(joint_torques)
-            self.joint_angles = self.joint_angles + self.joint_velocities * time_step
-            self.joint_velocities = self.joint_velocities + self.joint_accelerations * time_step
+            self.joint_angles = self.joint_angles + self.joint_velocities * fwd_dyn_time_step
+            self.joint_velocities = self.joint_velocities + self.joint_accelerations * fwd_dyn_time_step
         return self.joint_angles, self.joint_velocities
+    
+
+    # Calculate positions of ends of each link
+    def forward_kinematics(self, config):
+        # Initialize the starting point as the fixed base
+        joint_positions = [(0, 0)]
+
+        # Add all joint positions to list
+        for n in range(self.num_links):
+            # Compute angle
+            angle = 0
+            for j in range(n+1):
+                angle += config[j]
+            # Compute link end point with respect to origin
+            (newX, newY) = rotate_about_origin(self.link_lengths[n], 0, angle)
+            # Translate link from origin to previous link endpoint
+            new_joint_position = [joint_positions[n][0] + newX, joint_positions[n][1] + newY]
+            # Add to list
+            joint_positions.append(new_joint_position)
+
+        return joint_positions
 
 
-    def visualize(self, joint_angles, timestep):
+    # Get list of robot edges
+    def get_edges(self, config):
+
+        # Get the joint positions
+        joint_positions = self.forward_kinematics(config)
+
+        # Return list of edges
+        return endpoints_to_edges(joint_positions)
+    
+
+    # Interpolate between two configurations
+    def interpolate(self, config1, config2, num=10):
+
+        joint_interpolations = []
+
+        for n in range(self.num_links):
+            joint_interpolations.append(interpolate_angle(config1[n], config2[n], num))
+
+        configs_between = []
+
+        for j in range(num):
+            config = []
+            for k in range(self.num_links):
+                config.append(joint_interpolations[k][j])
+            configs_between.append(config)
+        
+        return configs_between
+    
+
+    def check_collision_config(self, config, obstacles, obstacle_edges):
+        # Get the edges of the robot for collision checking
+        robot_endpoints = self.forward_kinematics(config)
+        robot_edges = self.get_edges(config)
+
+        # Check if the robot endpoint is inside any obstacle
+        for obstacle in obstacles:
+            for endpoint in robot_endpoints:
+                if is_in_polygon(endpoint, obstacle):
+                    return True
+
+        # Check if robot edges intersect any obstacle edges
+        if is_intersecting(robot_edges, obstacle_edges):
+            return True
+
+        return False
+
+
+    def check_collision(self, parent_config, obstacles, obstacle_edges):
+
+        # Get intepolated configurations in between config1 and config2
+        configs_between = self.interpolate(parent_config, self.joint_angles)
+
+        # check if any of these configurations hit obstacles
+        for config in configs_between:
+            if self.check_collision_config(config, obstacles, obstacle_edges):
+                return True
+        return False
+    
+
+    # Check if the robot is in a valid configuration (within limits and not in collision with obstacles)
+    def isValidState(self, parent_config, obstacles, obstacle_edges):
+        ## Check velocity bounds
+        for joint_velocity in self.joint_velocities:
+            if abs(joint_velocity) > joint_velocity_limit:
+                return False
+        ## Check collisions
+        if self.check_collision(parent_config, obstacles, obstacle_edges):
+            return False
+        ## If both conditions pass, return true
+        return True
+    
+
+    # Display an animation of the robot's motion
+    def visualize(self, joint_angles, obstacles, timestep):
 
         # Clear the plot
         ax.clear()
@@ -128,14 +232,22 @@ class Robot:
             # Plot the manipulator link
             ax.plot([points[i, 0], points[i + 1, 0]], [points[i, 1], points[i + 1, 1]], styles[i])
 
+        # Draw each obstacle as a polygon
+        for obstacle in obstacles:
+            polygon = Polygon(
+                obstacle, closed=True, edgecolor='black', facecolor='gray'
+            )
+            ax.add_patch(polygon)
+
         # Plot settings
         ax.set_title('Planar Serial Manipulator')
         ax.set_xlabel('X-axis')
         ax.set_ylabel('Y-axis')
         ax.set_xlim(-self.plot_lim, self.plot_lim)
         ax.set_ylim(-self.plot_lim, self.plot_lim)
-        plt.grid()
+        # plt.grid()
         plt.show(block=False)
         # plt.savefig('manipulator_plot.png')
 
         plt.pause(timestep * 0.001)
+

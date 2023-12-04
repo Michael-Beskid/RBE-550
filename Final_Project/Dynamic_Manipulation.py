@@ -1,4 +1,5 @@
 from Robot_Util import Robot
+from Map2D import Map
 import numpy as np
 
 
@@ -26,13 +27,31 @@ torque_vector = [0,0,0]
 
 ## Simulation Parameters
 timestep = 50 # milliseconds
-num_iterations = 100
+num_iterations = 200
 
 
 def main():
 
     # Initialize array of robot states
     robot_poses = []
+
+    # Load map
+    map_2d = Map("maps/map.csv")
+    obstacles, obstacle_edges = map_2d.get_obstacles()
+
+    ### UNCOMMENT TO CHECK STATE VALIDATOR ###
+    # robot1 = Robot([1,1,1], [0,0,0], [0,0,0], [1,1,1]) # Should pass
+    # robot2 = Robot([1,1,1], [np.pi/4,0,0], [0,0,0], [1,1,1]) # Should fail due to obstacle collision
+    # robot3 = Robot([1,1,1], [0,0,0], [0,0,-20], [1,1,1]) # Should fail due to joint velocity limit
+    # print("Robot 1: Is Valid State?")
+    # print ("Yes" if robot1.isValidState([0,0,0], obstacles, obstacle_edges) else "No")
+    # robot1.visualize([0,0,0],obstacles,2000)ss
+    # print("Robot 2: Is Valid State?")
+    # print ("Yes" if robot2.isValidState([0,0,0], obstacles, obstacle_edges) else "No")
+    # robot2.visualize([np.pi/4,0,0],obstacles,2000)
+    # print("Robot 3: Is Valid State?")
+    # print ("Yes" if robot3.isValidState([0,0,0], obstacles, obstacle_edges) else "No")
+    # robot3.visualize([0,0,0],obstacles,2000)
 
     # Simulate robot
     for x in range(num_iterations):
@@ -44,6 +63,6 @@ def main():
 
     # Animate robot
     for x in range(num_iterations):
-        robot.visualize(robot_poses[x], timestep)
+        robot.visualize(robot_poses[x], obstacles, timestep)
 
 main()
