@@ -1,4 +1,5 @@
 from Robot_Util import Robot
+from RRT import RRT
 from Map2D import Map
 import numpy as np
 
@@ -36,7 +37,7 @@ def main():
     robot_poses = []
 
     # Load map
-    map_2d = Map("maps/map.csv")
+    map_2d = Map("maps/petermap.csv")
     obstacles, obstacle_edges = map_2d.get_obstacles()
 
     ### UNCOMMENT TO CHECK STATE VALIDATOR ###
@@ -52,6 +53,10 @@ def main():
     # print("Robot 3: Is Valid State?")
     # print ("Yes" if robot3.isValidState([0,0,0], obstacles, obstacle_edges) else "No")
     # robot3.visualize([0,0,0],obstacles,2000)
+
+    # Initialize planner
+    rrt_planner = RRT(robot, [1,1,1,0,0,0])
+    rrt_planner.run()
 
     # Simulate robot
     for x in range(num_iterations):

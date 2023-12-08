@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+# NOTE: gravity not implemented
+# use this as a guide for a simple numerical ODE solver
+
 # constants
 m1 = m2 = 1; l1 = l2 = 1; 
 tau1 = tau2 = 0
@@ -52,89 +55,7 @@ for t in range(int(t_start * 10), int(t_end * 10) + 1):
     theta1_values.append(theta1)
     theta2_values.append(theta2)
 
-# Plotting theta1 and theta2 over time
-# plt.figure(figsize=(10, 6))
-# plt.plot(time_values, theta1_values, label='Theta 1')
-# plt.plot(time_values, theta2_values, label='Theta 2')
-# plt.xlabel('Time')
-# plt.ylabel('Joint Angles')
-# plt.title('Joint Angles over Time')
-# plt.legend()
-# plt.grid(True)
-# plt.show()
-
-# ANIMATE GRAPH
-# fig, ax = plt.subplots()
-# line_theta1, = ax.plot([], [], 'r-', label='Theta 1')
-# line_theta2, = ax.plot([], [], 'b-', label='Theta 2')
-# ax.set_xlim(0, len(theta1_values))  # Adjust the x-axis limits according to your data
-# ax.set_ylim(min(min(theta1_values), min(theta2_values)),
-#             max(max(theta1_values), max(theta2_values)))  # Adjust the y-axis limits
-
-# # Update function for the animation
-# def update(frame):
-#     line_theta1.set_data(range(frame), theta1_values[:frame])  # Update Theta 1 values
-#     line_theta2.set_data(range(frame), theta2_values[:frame])  # Update Theta 2 values
-#     return line_theta1, line_theta2
-
-# # Create the animation
-# ani = FuncAnimation(fig, update, frames=len(theta1_values), interval=50, blit=True)
-
-# # Set labels and title
-# ax.set_xlabel('Time (s*10)')
-# ax.set_ylabel('Joint Angles (rad)')
-# ax.set_title('Joint Angle over Time')
-# ax.legend()
-# plt.grid(True)
-
-# # Show the animation
-# plt.show()
-
-# Define the link lengths of the robot arm
-# l1 = 1  # Length of link 1
-# l2 = 1  # Length of link 2
-
-# # Create a figure and axis for the animation
-# fig, ax = plt.subplots()
-# line, = ax.plot([], [], 'o-', lw=2)  # Line for the robot arm
-
-# # Set axis limits based on the workspace dimensions
-# ax.set_xlim(-3, 3)  # Adjust according to your workspace
-# ax.set_ylim(-3, 3)  # Adjust according to your workspace
-
-# # Initialize the robot arm segments
-# segment1, = ax.plot([], [], 'r-', lw=2)
-# segment2, = ax.plot([], [], 'b-', lw=2)
-
-# # Function to update the robot's arm based on joint angles
-# def update(frame):
-#     theta1 = theta1_values[frame]  # Get theta1 for the current frame
-#     theta2 = theta2_values[frame]  # Get theta2 for the current frame
-    
-#     # Calculate the positions of joint 1 and joint 2
-#     joint1_x = 0
-#     joint1_y = 0
-#     joint2_x = l1 * np.cos(theta1)
-#     joint2_y = l1 * np.sin(theta1)
-#     joint3_x = joint2_x + l2 * np.cos(theta1 + theta2)
-#     joint3_y = joint2_y + l2 * np.sin(theta1 + theta2)
-
-#     # Update the robot arm segments
-#     segment1.set_data([joint1_x, joint2_x], [joint1_y, joint2_y])
-#     segment2.set_data([joint2_x, joint3_x], [joint2_y, joint3_y])
-
-#     return segment1, segment2
-
-# # Create the animation
-# ani = FuncAnimation(fig, update, frames=len(theta1_values), interval=50, blit=True)
-
-# # Set labels and title
-# ax.set_xlabel('X-axis')
-# ax.set_ylabel('Y-axis')
-# ax.set_title('2R Manipulator Workspace Animation')
-
-# # Show the animation
-# plt.show()
+# === Plotting ===
 
 # BOTH ANIMATIONS
 import matplotlib.pyplot as plt
