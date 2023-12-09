@@ -55,9 +55,9 @@ def main():
     # robot3.visualize([0,0,0],obstacles,2000)
 
     # Initialize planner
-    rrt_planner = RRT(robot, [1,1,1,0,0,0])
-    rrt_planner.run()
-
+    rrt_planner = RRT(robot, map_2d, np.array([1,1,1,0,0,0]), np.array([0,0,0,0,0,0]))
+    rrt_planner.run(n_samples=1, n_iterations=5)
+    
     # Simulate robot
     for x in range(num_iterations):
         joint_angles, joint_velocities = robot.fwd_dyn(torque_vector, timestep)
