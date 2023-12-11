@@ -6,7 +6,7 @@ from Utils import interpolate_angle, is_in_polygon, is_intersecting, endpoints_t
 
 # Parameters
 fwd_dyn_time_step = 0.001
-joint_velocity_limit = 10 # CHANGE THIS TO A REAL VALUE THAT IS REASONABLE
+joint_velocity_limit = 10 # radians/second
 
 
 # Initialize figure for animation

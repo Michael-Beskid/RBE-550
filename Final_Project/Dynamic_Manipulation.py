@@ -1,5 +1,5 @@
 from Robot_Util import Robot
-from RRT import RRT
+from RRT import RRT, Node
 from Map2D import Map
 import numpy as np
 
@@ -54,20 +54,31 @@ def main():
     # print ("Yes" if robot3.isValidState([0,0,0], obstacles, obstacle_edges) else "No")
     # robot3.visualize([0,0,0],obstacles,2000)
 
+    ### UNCOMMENT TO SIMULATE THE ROBOT FOR SOME TIME AND THEN ANIMATE IT ###
+    # # Simulate robot
+    # for x in range(num_iterations):
+    #     joint_angles, joint_velocities = robot.fwd_dyn(torque_vector, timestep)
+    #     pose = []
+    #     for angle in joint_angles:
+    #         pose.append(angle[0])
+    #     robot_poses.append(pose)
+    # # Animate robot
+    # for x in range(num_iterations):
+    #     robot.visualize(robot_poses[x], obstacles, timestep)
+
     # Initialize planner
     rrt_planner = RRT(robot, map_2d, np.array([1,1,1,0,0,0]), np.array([0,0,0,0,0,0]))
-    rrt_planner.run(n_samples=1, n_iterations=5)
-    
-    # Simulate robot
-    for x in range(num_iterations):
-        joint_angles, joint_velocities = robot.fwd_dyn(torque_vector, timestep)
-        pose = []
-        for angle in joint_angles:
-            pose.append(angle[0])
-        robot_poses.append(pose)
 
-    # Animate robot
-    for x in range(num_iterations):
-        robot.visualize(robot_poses[x], obstacles, timestep)
+    # Compute path
+    path = rrt_planner.run(n_samples=1, n_iterations=5)
+
+    # Animate path
+    for node in path:
+        for pose in node.plotting_poses:
+            robot.visualize(pose, obstacles, timestep)
+
+
+    
+
 
 main()
