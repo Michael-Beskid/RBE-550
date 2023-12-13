@@ -6,7 +6,7 @@ from Utils import interpolate_angle, is_in_polygon, is_intersecting, endpoints_t
 
 # Parameters
 fwd_dyn_time_step = 0.001
-joint_velocity_limit = 10 # radians/second
+joint_velocity_limit = 100 # radians/second
 
 
 # Initialize figure for animation
@@ -204,6 +204,24 @@ class Robot:
             return False
         ## If both conditions pass, return true
         return True
+    
+
+    # Compute holding torque from current configuration
+    def calc_holding_torque(self):
+        g = 9.81
+        if self.num_links == 1:
+            tau1 = self.link_masses[0]*g*(self.link_lengths[0]*np.cos(self.joint_angles[0]))
+            holding_torque = [tau1]
+        if self.num_links == 2:
+            tau1 = self.link_masses[0]*g*(self.link_lengths[0]*np.cos(self.joint_angles[0])) + self.link_masses[1]*g*(self.link_lengths[0]*np.cos(self.joint_angles[0]) + self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1]))
+            tau2 = self.link_masses[1]*g*(self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1]))
+            holding_torque = [tau1, tau2]
+        if self.num_links == 3:
+            tau1 = self.link_masses[0]*g*(self.link_lengths[0]*np.cos(self.joint_angles[0])) + self.link_masses[1]*g*(self.link_lengths[0]*np.cos(self.joint_angles[0]) + self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])) + self.link_masses[2]*g*(self.link_lengths[0]*np.cos(self.joint_angles[0]) + self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1]) + self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2]))
+            tau2 = self.link_masses[1]*g*(self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])) + self.link_masses[2]*g*(self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1]) + self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2]))
+            tau3 = self.link_masses[2]*g*(self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2]))
+            holding_torque = [tau1, tau2, tau3]
+        return holding_torque
     
 
     # Display an animation of the robot's motion

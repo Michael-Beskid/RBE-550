@@ -6,16 +6,18 @@ import copy
 # RRT-based kinodynamic planner 
 
 class Node:
+
     ''' 
     RRT Node object. 
         Attributes:
-            state : 1 x 6 list of floats representing theta1, 2, 3, omega 1, 2, 3
+            state : 1 x 6 np.array of floats representing theta1, 2, 3, omega 1, 2, 3
             t1, t2, t3, w1, w2, w3 : values for each state (deprecated?)
             parent : Node associated with this Node's parent
             torques_req : 1 x 3 float of torques needed to move to this Node
             plotting_poses : for visualizations: n x 6 array of floats representing slices of our simulation (from the previous Node, to this Node) to be able to plot when we're done
     '''
-    def __init__(self, state, plotting_poses, parent=None, torques_req = [0,0,0]):
+
+    def __init__(self, state, plotting_poses = None, parent=None, torques_req = [0,0,0]):
         self.state = state
         self.t1, self.t2, self.t3, self.w1, self.w2, self.w3 = state
         self.parent = parent
@@ -30,6 +32,7 @@ class Node:
         print(f"So you're debugging {self} huh... \nstate: {self.state}, \t parent: {self.parent}")
 
 class RRT:
+    
     ''' 
     RRT kinodynamic planner object used to compute a valid trajectory around obstacles. 
         Attributes:
@@ -50,11 +53,14 @@ class RRT:
             add_node() : Add a valid state as a Node into the tree.
             construct_path() : Recurse through RRT tree to construct a valid path.
     '''
+
     def __init__(self, robot, map, goal, start=None):
         self.robot = robot          # robot class as defined in Robot_Util
         self.map = map              # Map2D object for collision checking
         self.tree = []              # list of nodes as they're added  # TODO: rename 'tree' to RRTtree
-        self.start = Node([*robot.joint_angles[:3], *robot.joint_velocities[:3]]) if start.any()==None else Node([*start])  # start pose of robot if given. o/w whatever state the robot is in now.  #TODO: Fix this because it's creating numpy arrays within arrays ;(
+        # self.start = Node([*robot.joint_angles[:3], *robot.joint_velocities[:3]], [*robot.joint_angles[:3], *robot.joint_velocities[:3]]) if start.any()==None else Node([*start])  # start pose of robot if given. o/w whatever state the robot is in now.  #TODO: Fix this because it's creating numpy arrays within arrays ;(
+        self.start = Node(start, # node state
+                          [start, start]) # plotting poses
         self.goal = Node([*goal])   # desired end pose of robot
         self.found = False          # found flag
         self.path = []              # list of nodes in our found path
@@ -68,13 +74,14 @@ class RRT:
         print(f"also, I added start and goal to our self.tree: {self.tree}")
 
     def run(self, n_samples = 100, n_iterations = 10):
+        
         ''' 
         Execute main search function 
             Arguments:
                 n_samples : int, number of samples to execute before failing
                 n_iterations : int, number of iterations to try during a qnew search 
             Returns:
-                found : bool, true if found, false if not
+                path : list of nodes in found path
         '''
 
         print(f"You have reached the main function, lmao")
@@ -96,19 +103,24 @@ class RRT:
         for _ in range(n_samples):
 
             qrand = self.sample()
-            print(f"qrand: {qrand}")
+            # print(f"qrand: {qrand}")
 
-            qnew = self.extend(qrand, n_iterations = n_iterations)
+            self.extend(qrand, n_iterations = n_iterations)
 
-            self.check(qnew)
+            self.check(self.tree[-1]) # qnew is the last node of the tree
 
             if self.found:
-                return self.path
+                print(self.path)
+                print("Path found!")
+                return self.path 
             
-        print("Maximum iterations reached. No path found.")
+            print('')
+            
+        print("\nMaximum iterations reached. No path found.\n")
         
 
     def sample(self, goal_bias = 0.1):
+
         ''' 
         Randomly sample the state space.
             Arguments:
@@ -129,54 +141,99 @@ class RRT:
         
 
     def extend(self, qrand, n_iterations):
+
         '''
         Extend the tree in the direction of qrand, our randomly-sampled node.
             Arguments:
                 qrand : Node, randomly sampled node
+                n_iterations : number of iterations to simulate our robot moving in, resetting each time.
             Returns:
                 qnew : Node, node in state space that moves towards qrand
         '''
 
-        # find closest existing node to bridge from
-        print("finding closest existing node to qrand...")
-        distance, index = self.kdtree.query(qrand)
-        bridge_from_state = self.kdtree.data[index]
-        print(f"nearest to qrand: {bridge_from_state} at distance: {distance}")
-        # find this state's corresponding node
-        for i, node in enumerate(self.tree):
-            if (bridge_from_state == node.state).all():
-                parent = node
+        # Find qnear
+        print("finding closest existing node to qrand (qnear)...")
+        # distance, index = self.kdtree.query(qrand)
+        # qnear_state = self.kdtree.data[index] # this is qnear
+        # print(f"qnear: {qnear_state}")
+
+
+        closest_node = None
+        min_distance = float('inf')
+
+        for node in self.tree:
+            dist = self.distance(node.state, qrand)
+            if dist < min_distance:
+                closest_node = node
+                min_distance = dist
+
+        qnear = closest_node
+        qnear_state = closest_node.state
+        parent = qnear
+        # for node in self.tree:
+        #     # print(f"qnear state: {np.array(qnear_state)}, node.state: {np.array(node.state)}\n subtracting: {np.array(qnear_state) - np.array(node.state)}")
+        #     if sum(np.array(qnear_state) - np.array(node.state)) < 0.1:
+        #         parent = node
 
         # bridge from that node
         print("simulating to find possible branch to qnew ...")
 
         valid_sims = {} # initialze simulation dictionary
-        parent_pose = self.robot.joint_angles # save parent pose
-        
+        # parent_pose = self.robot.joint_angles # save parent pose
+
+        # set the robot (or make a new robot) to have the parent node's positions and velocities.
+        IC_robot = Robot(self.robot.link_lengths, qnear_state[:3], qnear_state[3:], self.robot.link_masses) # new robot starting from initial conditions
+        IC_holding_torque = IC_robot.calc_holding_torque()
+
         for i in range(n_iterations):
 
             # generate random torque values for each joint
-            random_torques = np.random.uniform(-10,10,3) # critical value here, min and max torque
-            robot_copy = copy.deepcopy(self.robot)  # create a complete copy of our robot to simultate fresh
+            # random_torques = [np.random.randint(-100,100), np.random.randint(-60,60), np.random.randint(-30,30)] # critical value here, min and max torque
+            torque_lim0 = 1
+            torque_lim1 = 1
+            torque_lim2 = 1
+            random_torques = [IC_holding_torque[0] + np.random.randint(-torque_lim0,torque_lim0)/10, 
+                              IC_holding_torque[1] + np.random.randint(-torque_lim1,torque_lim1)/10, 
+                              IC_holding_torque[2] + np.random.randint(-torque_lim2,torque_lim2)/10] # critical value here, min and max torque
+            robot_copy = copy.deepcopy(IC_robot)  # create a complete copy of our robot to simulate fresh # TODO if we copy robot with simulate we don't have to do this
             
-            
-            timestep = 50 # duration in ms
-            steps = 10 
-            is_valid, robot_states, end_state = self.simulate(robot_copy, random_torques, parent_pose, steps, timestep)
+            timestep = 5 # duration in ms
+            steps = 50
+            is_valid, robot_states, end_state = self.simulate(robot_copy, random_torques, steps, timestep)
 
             if is_valid:
-                dis = self.distance(qrand, np.array(end_state))
+                # print(f"endstate: {end_state}")
+                dis = self.distance(np.array(qrand), end_state)
                 valid_sims[i] = {"end_state": end_state,
-                                 "robot_poses" : robot_states,
+                                 "robot_states" : robot_states,
                                  "torques": random_torques,
-                                 "distance": dis}
-            
-        # get lowest distance from valid simulations, thats your new node
-        min_distance_key = min(valid_sims, key=lambda x: valid_sims[x]['distance'])
-        print(f"THIS SHOULD BE A STATE: {valid_sims[min_distance_key]['end_state']}")
-        self.add_node(parent, valid_sims[min_distance_key]['end state'], valid_sims[min_distance_key]['torques'], valid_sims[min_distance_key]['robot_states'])
-        self.kdtree = KDTree(np.vstack([node.state for node in self.tree])) # recalculate kd tree with updated tree
-        pass
+                                 "distance": dis,
+                                 "robot": robot_copy}
+        
+        print(" Done!")          
+
+        if len(valid_sims) != 0:
+            # get lowest distance from valid simulations, thats your new node
+            min_distance_key = min(valid_sims, key=lambda x: valid_sims[x]['distance'])
+
+            # add a new node!
+            # print(f"qnew state: {valid_sims[min_distance_key]['end_state']}")
+            qnew = self.add_node(parent, 
+                                 valid_sims[min_distance_key]['end_state'], 
+                                 valid_sims[min_distance_key]['torques'], 
+                                 valid_sims[min_distance_key]['robot_states'])
+
+            # recalculate kd tree with updated tree
+            # self.kdtree = KDTree(np.vstack([node.state for node in self.tree])) 
+            # print(f"kdtree data: {self.kdtree.data}")
+            for pose in valid_sims[min_distance_key]['robot_states'][:3]:
+                IC_robot.visualize(pose, self.map.get_obstacles()[0], 5)
+
+            return qnew
+        else:
+            print("no valid sims")
+        
+
 
 
     def check(self, node):
@@ -185,33 +242,41 @@ class RRT:
             Returns:
 
         '''
-        goal_threshold = 2
-        if self.distance(node, self.goal) < goal_threshold:
+        goal_threshold = 0.2
+        distance = self.distance(node.state, self.goal.state)
+        print(f"new node is {round(distance, 3)} units away... ")
+        if distance < goal_threshold:
             self.found = True
-            self.construct_path(node)
+            self.path = self.construct_path(node)
+            print(self.path)
 
 
     # === Helper Functions ===
     
 
-    def distance(self, P, Q, metric = "manhattan", bias = 0.7):
+    def distance(self, P, Q, metric = "euclidean", bias = 0.5):
+
         ''' 
         Distance Metric from points P and Q in our state space
             Arguments:
-                P, Q : Nodes of our tree
-                metric : str specifing a certain distance metric 
-                bias : balance between angle and angular velocity. Higher value biases angles.
+                P, Q : state vectors of nodes within our tree
+                metric : str specifing a certain distance metric (available: manhattan, euclidean)
+                bias : balance between angle and angular velocity. Higher value biases angle over angular vel.
             Returns
                 Distance between the two nodes' states
         ''' 
+
         match metric:
+            case "fk":
+                pass
             case "manhattan":
-                angle_dif = sum(abs(p - q) for p, q in zip(P[:2], Q[:2]))
+                # angle_dif = sum(abs(p - q) for p, q in zip(P[:2], Q[:2])) # whatttt
+                angle_dif = sum(abs(p - q) for p, q in zip(P[:3], Q[:3]))
 
                 angle_rate_dif = sum(abs(p - q) for p, q in zip(P[3:], Q[3:]))
 
-                difference = bias * angle_dif + (1 - bias) * angle_rate_dif
-                
+                # difference = bias * angle_dif + (1 - bias) * angle_rate_dif
+                difference = bias * angle_dif + (1-bias) * angle_rate_dif
                 return difference
             
             case "euclidean":
@@ -221,23 +286,26 @@ class RRT:
                 raise TypeError("Unknown distance metric. Check your spelling? dummy")
     
 
-    def simulate(self, robot, torque, parent_pose, steps, timestep):
+    def simulate(self, robot, torque, steps, timestep):
+        
         '''
         Simulate robot forward in time.
             Arguments:
                 robot : robot object, as defined in Robot_Util.py
-                torque : 1 x 3 list of joint torques (nm) 
+                torque : 1 x 3 list of joint torques (nm)
                 steps : int, number of iterations for the numerical solver
                 timestep: number of miliseconds to run each simulaton step
             Returns:
                 is_valid, bool, is simulation in collision or not
                 robot_states : n x 6 list of joint positions 
-                end_state : 1 x 6 list of the ending joint positions and velocities
+                end_state : 1 x 6 np.array of the ending joint positions and velocities
         '''
     
+        parent_pose = robot.joint_angles
+
         robot_states = []
         
-        print(f"\tsimulating {(timestep)/1000} s")
+        print(f" {(timestep)/1000} s . . .", end='') # print for every sim
 
         obstacles, obstacle_edges = self.map.get_obstacles()
 
@@ -247,13 +315,16 @@ class RRT:
         for _ in range(steps):
             # Run one simulation step
             joint_angles, joint_velocities = robot.fwd_dyn(torque, timestep)
+   
             # Save intermediate pose
-            robot_states.append(np.concatenate((joint_angles.reshape((1,3)), joint_velocities.reshape((1,3))), axis=0))
+            
+            # robot_states.append(np.concatenate((joint_angles.reshape((1,3)), joint_velocities.reshape((1,3))), axis=0).flatten())
+            robot_states.append(np.concatenate((joint_angles, joint_velocities), axis=0).T.flatten())
+            
         
         end_state = robot_states[-1]
 
-        # isValidState() does its *own linear interpolation*, between the robot objects current state and a 
-        # specified parent pose
+        # isValidState() does its *own linear interpolation*, between the robot objects current state and a specified parent pose
         is_valid = robot.isValidState(parent_pose, obstacles, obstacle_edges)
         if not is_valid:
             print("Ruh roh raggy, simulation collision!")
@@ -271,55 +342,30 @@ class RRT:
         
         # apparently we can't add to kd tree so I guess whenever we query we'll rebuild
         # add node
-        self.tree.append(Node(qnew_state, plotting_poses, parent, qnew_torques))
+        new_node = Node(qnew_state, plotting_poses, parent, qnew_torques)
+        print(f"ADDED NEW NODE! @ {qnew_state}")
+        self.tree.append(new_node)
+
 
 
     def construct_path(self, final_node):
-        path = []
+            """Compute path cost starting from a start node to an end node
+            arguments:
+                final_node - path end node
 
-        for i in range(self.tree):
-            point = self.get_new_point(0.09)
-
-            if self.map_array[point[0]][point[1]] == 0:
-                continue
-
-            qrand = Node(point[0], point[1])
-
-            qnear = self.get_nearest_node(qrand) # first time around, this is the start
-
-            row = 0
-            col = 0
-
-            if qnear.col == qrand.col:
-                new_point_row = qrand.row + step
-                new_point_col = qrand.col
-            else:
-                direction_vector = np.array([qrand.row - qnear.row, qrand.col - qnear.col])
-                direction_norm = np.linalg.norm(direction_vector)
-
-                unit_direction = direction_vector / direction_norm
-
-                row = int(qnear.row + step * unit_direction[0])
-                col = int(qnear.col + step * unit_direction[1])
+            return:
+                path - list of nodes from start to goal
+            """
             
-            
-            if not self.check_collision(qnear, Node(row, col)):
-                qnew = Node(row, col)
-                qnew.parent = qnear
-                self.vertices.append(qnew)
+            curr_node = final_node
+            path = []
 
-                if len(self.get_neighbors(self.goal, step)) != 0:
-                    if not self.check_collision(qnew, self.goal):
-                        self.goal.parent = qnew
-                        self.found = True
+            # Keep tracing back and adding parent nodes to construct path
+            while curr_node != None:
+                path.append(curr_node)
+                parent = curr_node.parent
+                curr_node = parent
 
-        # Output
-        if self.found:
-            steps = len(self.vertices) - 2
-            length = self.goal.cost
-            print("It took %d nodes to find the current path" % steps)
-            print("The path length is %.2f" % length)
-        else:
-            print("No path found")
+            path.reverse()
+            return path
 
-        return path
