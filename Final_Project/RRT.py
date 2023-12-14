@@ -119,7 +119,7 @@ class RRT:
         print("\nMaximum iterations reached. No path found.\n")
         
 
-    def sample(self, goal_bias = 0.1):
+    def sample(self, goal_bias = 0.9):
 
         ''' 
         Randomly sample the state space.
@@ -189,16 +189,19 @@ class RRT:
 
             # generate random torque values for each joint
             # random_torques = [np.random.randint(-100,100), np.random.randint(-60,60), np.random.randint(-30,30)] # critical value here, min and max torque
-            torque_lim0 = 1
-            torque_lim1 = 1
-            torque_lim2 = 1
+            torque_lim0 = 500
+            torque_lim1 = 500
+            torque_lim2 = 500
             random_torques = [IC_holding_torque[0] + np.random.randint(-torque_lim0,torque_lim0)/10, 
                               IC_holding_torque[1] + np.random.randint(-torque_lim1,torque_lim1)/10, 
                               IC_holding_torque[2] + np.random.randint(-torque_lim2,torque_lim2)/10] # critical value here, min and max torque
+            # random_torques = [np.random.randint(-torque_lim0,torque_lim0)/10, 
+            #                  np.random.randint(-torque_lim1,torque_lim1)/10, 
+            #                  np.random.randint(-torque_lim2,torque_lim2)/10]
             robot_copy = copy.deepcopy(IC_robot)  # create a complete copy of our robot to simulate fresh # TODO if we copy robot with simulate we don't have to do this
             
-            timestep = 5 # duration in ms
-            steps = 50
+            timestep = 40 # duration in ms
+            steps = 5
             is_valid, robot_states, end_state = self.simulate(robot_copy, random_torques, steps, timestep)
 
             if is_valid:
@@ -226,9 +229,10 @@ class RRT:
             # recalculate kd tree with updated tree
             # self.kdtree = KDTree(np.vstack([node.state for node in self.tree])) 
             # print(f"kdtree data: {self.kdtree.data}")
-            for pose in valid_sims[min_distance_key]['robot_states'][:3]:
-                IC_robot.visualize(pose, self.map.get_obstacles()[0], 5)
+            for pose in valid_sims[min_distance_key]['robot_states'][3:]:
+                robot_copy.visualize(pose, self.map.get_obstacles()[0], timestep)
 
+            print(f"qnew: {qnew}")
             return qnew
         else:
             print("no valid sims")
@@ -242,7 +246,7 @@ class RRT:
             Returns:
 
         '''
-        goal_threshold = 0.2
+        goal_threshold = 0.05
         distance = self.distance(node.state, self.goal.state)
         print(f"new node is {round(distance, 3)} units away... ")
         if distance < goal_threshold:
@@ -254,7 +258,7 @@ class RRT:
     # === Helper Functions ===
     
 
-    def distance(self, P, Q, metric = "euclidean", bias = 0.5):
+    def distance(self, P, Q, metric = "manhattan", bias = .1):
 
         ''' 
         Distance Metric from points P and Q in our state space
@@ -321,7 +325,7 @@ class RRT:
             # robot_states.append(np.concatenate((joint_angles.reshape((1,3)), joint_velocities.reshape((1,3))), axis=0).flatten())
             robot_states.append(np.concatenate((joint_angles, joint_velocities), axis=0).T.flatten())
             
-        
+            # robot.visualize(joint_angles, self.map.get_obstacles()[0], timestep)
         end_state = robot_states[-1]
 
         # isValidState() does its *own linear interpolation*, between the robot objects current state and a specified parent pose

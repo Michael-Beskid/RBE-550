@@ -67,10 +67,10 @@ def main():
     #     robot.visualize(robot_poses[x], obstacles, timestep)
 
     # Initialize planner
-    rrt_planner = RRT(robot, map_2d, np.array([np.pi/2,0,0,0,0,0]), np.array([0,0,0,0,0,0]))
+    rrt_planner = RRT(robot, map_2d, np.array([np.pi/2,0,0,0,0,0]), np.array([(np.pi/2)-0.5,0,0,0,0,0]))
 
     # Compute path
-    path = rrt_planner.run(n_samples=1000, n_iterations=5)
+    path = rrt_planner.run(n_samples=1000, n_iterations=10)
 
     # Animate path
     for node in path:
