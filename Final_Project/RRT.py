@@ -31,6 +31,7 @@ class Node:
     def debug(self):
         print(f"So you're debugging {self} huh... \nstate: {self.state}, \t parent: {self.parent}")
 
+
 class RRT:
     
     ''' 
@@ -72,6 +73,7 @@ class RRT:
         print(self.kdtree)
         self.tree.append(self.start)
         print(f"also, I added start and goal to our self.tree: {self.tree}")
+
 
     def run(self, n_samples = 100, n_iterations = 10):
         
@@ -157,7 +159,6 @@ class RRT:
         # qnear_state = self.kdtree.data[index] # this is qnear
         # print(f"qnear: {qnear_state}")
 
-
         closest_node = None
         min_distance = float('inf')
 
@@ -238,14 +239,16 @@ class RRT:
             print("no valid sims")
         
 
-
-
     def check(self, node):
+
         '''
         Checks to see if our planner has made it close to the goal. (success condition)
+            Arguments:
+                node : a tree node to compare against the goal node
             Returns:
-
+                True if specified node is within the defined threshold distance of the goal
         '''
+
         goal_threshold = 0.05
         distance = self.distance(node.state, self.goal.state)
         print(f"new node is {round(distance, 3)} units away... ")
@@ -265,8 +268,8 @@ class RRT:
             Arguments:
                 P, Q : state vectors of nodes within our tree
                 metric : str specifing a certain distance metric (available: manhattan, euclidean)
-                bias : balance between angle and angular velocity. Higher value biases angle over angular vel.
-            Returns
+                bias : balance between angle and angular velocity. Higher value biases angle over angular vel
+            Returns:
                 Distance between the two nodes' states
         ''' 
 
@@ -328,8 +331,8 @@ class RRT:
             # robot.visualize(joint_angles, self.map.get_obstacles()[0], timestep)
         end_state = robot_states[-1]
 
-        # isValidState() does its *own linear interpolation*, between the robot objects current state and a specified parent pose
-        is_valid = robot.isValidState(parent_pose, obstacles, obstacle_edges)
+        # is_valid_state() does its *own linear interpolation*, between the robot objects current state and a specified parent pose
+        is_valid = robot.is_valid_state(parent_pose, obstacles, obstacle_edges)
         if not is_valid:
             print("Ruh roh raggy, simulation collision!")
 
@@ -337,6 +340,7 @@ class RRT:
     
 
     def add_node(self, parent, qnew_state, qnew_torques, plotting_poses):
+
         '''
         Add a valid state to the tree.
             Arguments:
@@ -351,25 +355,26 @@ class RRT:
         self.tree.append(new_node)
 
 
-
     def construct_path(self, final_node):
-            """Compute path cost starting from a start node to an end node
-            arguments:
+            
+        '''
+        Compute path cost starting from a start node to an end node
+            Arguments:
                 final_node - path end node
 
-            return:
+            Returns:
                 path - list of nodes from start to goal
-            """
-            
-            curr_node = final_node
-            path = []
+        '''
+        
+        curr_node = final_node
+        path = []
 
-            # Keep tracing back and adding parent nodes to construct path
-            while curr_node != None:
-                path.append(curr_node)
-                parent = curr_node.parent
-                curr_node = parent
+        # Keep tracing back and adding parent nodes to construct path
+        while curr_node != None:
+            path.append(curr_node)
+            parent = curr_node.parent
+            curr_node = parent
 
-            path.reverse()
-            return path
+        path.reverse()
+        return path
 

@@ -5,8 +5,8 @@ from Utils import interpolate_angle, is_in_polygon, is_intersecting, endpoints_t
 
 
 # Parameters
-fwd_dyn_time_step = 0.001
-joint_velocity_limit = 100 # radians/second
+fwd_dyn_time_step = 0.001 # seconds
+joint_velocity_limit = 100 # rad/sec
 
 
 # Initialize figure for animation
@@ -14,9 +14,46 @@ fig, ax = plt.subplots()
 ax.set_aspect('equal')
 
 
-# Robot class for n-link planar manipulator (n = [1, 3])
 class Robot:
+
+    ''' 
+    Robot object used to simulate the dynamics of a particular n-link (n = [1,2,3]) planar manipulator
+        Attributes:
+            link_lengths : A list of the lengths of each link
+            num_links : The number of links the manipulator has
+            joint_angles : A list of angualr positions for each joint
+            joint_velocities : A list of angular velocities for each joint
+            joint_accelerations : A list of angualr accelerations for each joint
+            link_masses : A list of the masses of each link
+            M : The mass matrix for the current configuration
+            C : The Coriolis matrix for the current configuration
+            G : The gravity matrix for the current configuration
+        Methods:
+            init() : Instantiate a new Robot object with specified parameters.
+            calc_mass_matrix() : Compute the mass matrix for the current configuration.
+            calc_coriolis_matrix() : Compute the Coriolis matrix for the current configuration of the manipulator.
+            calc_gravity_matrix() : Compute the gravity matrix for the current configuration of the manipulator.
+            fwd_dyn() : Simulate the robot forward in time using the dynamical model and update the robot's state.
+            fwd_kin() : Calculate the positions of the ends of each link for an input configuration.
+            get_edges() : Produce a list of line segments that make up the manipulator for a specified configuration.
+            interpolate() : Generate a list of manipulator configurations interpolated between two specified configurations.
+            check_collision_config() : Check if a particualr configuration of the manipulator is in collision with any obstacles.
+            check_collision() : Checks if collisions result in moving the manipulator from a parent configration to its current configuration.
+            is_valid_state() : Checks if a specified movement of the manipulator is valid. Checks velocity limits and obstacle collisions.
+            calc_holding_torque() : Computes the holding torque to be applied at each joint to hold the manipulator in place at its current configuration.
+            visualize() : Display a visualization plot of the manipulator for a specified configuration.
+    '''
+    
     def __init__(self, link_lengths, init_angles, init_velocities, link_masses):
+
+        '''
+        Instantiate a new Robot object with specified parameters.
+            Arguments:
+                link_lengths : a list of lengths for each link in the manipulator
+                init_angles : a list of initial angular positions for the joints
+                init_velocities : a list of initial angular velocities for the joints
+                link_masses : a list of masses for each link in the manipulator
+        '''
 
         self.link_lengths = link_lengths
         self.num_links = len(link_lengths)
@@ -45,8 +82,12 @@ class Robot:
             self.plot_lim += length
         
 
-    # Calculate the mass matrix
     def calc_mass_matrix(self):
+
+        '''
+        Compute the mass matrix for the current configuration of the manipulator.
+        '''
+        
         if self.num_links == 1:
             self.M[0] = self.link_masses[0]*self.link_lengths[0]**2
         if self.num_links == 2:
@@ -66,8 +107,12 @@ class Robot:
             self.M[2][2] = self.link_lengths[2]**2*self.link_masses[2]
 
 
-    # Calculate the Coriolis matrix
     def calc_coriolis_matrix(self):
+
+        '''
+        Compute the Coriolis matrix for the current configuration of the manipulator.
+        '''
+        
         if self.num_links == 1:
             self.C[0] = 0
         if self.num_links == 2:
@@ -79,8 +124,12 @@ class Robot:
             self.C[2] = self.link_lengths[1]*self.link_lengths[2]*self.link_masses[2]*np.sin(self.joint_angles[2])*self.joint_velocities[0]**2 + self.link_lengths[1]*self.link_lengths[2]*self.link_masses[2]*np.sin(self.joint_angles[2])*self.joint_velocities[1]**2 + self.link_lengths[0]*self.link_lengths[2]*self.link_masses[2]*np.sin(self.joint_angles[1] + self.joint_angles[2])*self.joint_velocities[0]**2 + 2*self.link_lengths[1]*self.link_lengths[2]*self.link_masses[2]*np.sin(self.joint_angles[2])*self.joint_velocities[0]*self.joint_velocities[1]
 
 
-    # Calculate the gravity matrix
     def calc_gravity_matrix(self):
+
+        '''
+        Compute the gravity matrix for the current configuration of the manipulator.
+        '''
+        
         g = 9.81
         if self.num_links == 1:
             self.G[0] = self.link_masses[0]*self.link_lengths[0]*g*np.cos(self.joint_angles[0])
@@ -93,16 +142,32 @@ class Robot:
             self.G[2] = self.link_lengths[2]*self.link_masses[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2])*g
 
 
-    # Compute joint accelerations from joint positions, joint velocities, and torques
     def calc_joint_accel(self, joint_torques):
+
+        '''
+        Compute the joint accelerations resulting from an input torque vector.
+            Arguments:
+                joint_torques : list of torques applied at each joint 
+        '''
+        
         self.calc_mass_matrix()
         self.calc_coriolis_matrix()
         self.calc_gravity_matrix()
         self.joint_accelerations = np.matmul(np.linalg.inv(self.M), joint_torques - self.C - self.G)
     
 
-    # Use forward dynamics to calculate the robot state from an initial state, torque input vector, and time step
     def fwd_dyn(self, input_vector, time_steps):
+
+        '''
+        Simulate the robot forward in time using the dynamical model and update the robot's state.
+            Arguments:
+                input_vector : the initial state to begin the simulation from
+                time_steps : the number of finite 0.01 second steps to run the simulation for
+            Returns:
+                joint_angles : a list of updated angular positions of the joints 
+                joint_velocities : a list of updated angular velocities of the joints 
+        '''
+        
         joint_torques = np.zeros([self.num_links,1])
         for i in range(self.num_links):
             joint_torques[i] = input_vector[i]
@@ -113,8 +178,16 @@ class Robot:
         return self.joint_angles, self.joint_velocities
     
 
-    # Calculate positions of ends of each link
-    def forward_kinematics(self, config):
+    def fwd_kin(self, config):
+
+        '''
+        Calculate the positions of the ends of each link for an input configuration.
+            Arguments:
+                config : a list of joint angles specifying the configuration of the manipulator
+            Returns:
+                joint_positions : a list of [x,y] points located at the ends of each link (ordered 1--> n)
+        '''
+        
         # Initialize the starting point as the fixed base
         joint_positions = [(0, 0)]
 
@@ -134,19 +207,36 @@ class Robot:
         return joint_positions
 
 
-    # Get list of robot edges
     def get_edges(self, config):
 
+        '''
+        Produce a list of line segments that make up the manipulator for a specified configuration.
+            Arguments:
+                config : a list of joint angles specifying the configuration of the manipulator
+            Returns:
+                edges: a list of line segments which make up the manipulator in the specified configuration
+        '''
+        
         # Get the joint positions
-        joint_positions = self.forward_kinematics(config)
+        joint_positions = self.fwd_kin(config)
 
         # Return list of edges
-        return endpoints_to_edges(joint_positions)
+        edges = endpoints_to_edges(joint_positions)
+        return edges
     
 
-    # Interpolate between two configurations
     def interpolate(self, config1, config2, num=10):
 
+        '''
+        Generate a list of manipulator configurations interpolated between two specified configurations.
+            Arguments:
+                config1 :  a list of joint angles specifying the starting configuration of the manipulator
+                config2 :  a list of joint angles specifying the final configuration of the manipulator
+                num : the number of interpolated configurations to generate
+            Returns:
+                configs_between: a list of lists of joint angles specifying the interpolated configurations
+        '''
+        
         joint_interpolations = []
 
         for n in range(self.num_links):
@@ -164,8 +254,19 @@ class Robot:
     
 
     def check_collision_config(self, config, obstacles, obstacle_edges):
+
+        '''
+        Check if a particualr configuration of the manipulator is in collision with any obstacles.
+            Arguments:
+                config : a list of joint angles specifying the manipulator configuration to check
+                obstacles : a list of polygonal obstacles
+                obstacle_edges : a list of the line segments which make up all obstacles
+            Returns:
+                True if the manipulator is in collision with an obstacle
+        '''
+        
         # Get the edges of the robot for collision checking
-        robot_endpoints = self.forward_kinematics(config)
+        robot_endpoints = self.fwd_kin(config)
         robot_edges = self.get_edges(config)
 
         # Check if the robot endpoint is inside any obstacle
@@ -183,6 +284,16 @@ class Robot:
 
     def check_collision(self, parent_config, obstacles, obstacle_edges):
 
+        '''
+        Checks if collisions result in moving the manipulator from a parent configration to its current configuration.
+            Arguments:
+                parent_config : a list of joint angles specifying the starting configuration of the manipulator
+                obstacles : a list of polygonal obstacles
+                obstacle_edges : a list of the line segments which make up all obstacles
+            Returns:
+                True if the movement results in any collisions with obstacles
+        '''
+
         # Get intepolated configurations in between config1 and config2
         configs_between = self.interpolate(parent_config, self.joint_angles)
 
@@ -193,8 +304,18 @@ class Robot:
         return False
     
 
-    # Check if the robot is in a valid configuration (within limits and not in collision with obstacles)
-    def isValidState(self, parent_config, obstacles, obstacle_edges):
+    def is_valid_state(self, parent_config, obstacles, obstacle_edges):
+
+        '''
+        Checks if a specified movement of the manipulator is valid. Checks velocity limits and obstacle collisions.
+            Arguments:
+                parent_config : a list of joint angles specifying the starting configuration of the manipulator
+                obstacles : a list of polygonal obstacles
+                obstacle_edges : a list of the line segments which make up all obstacles
+            Returns:
+                True if the movement from the parent state to the current state is valid
+        '''
+        
         ## Check velocity bounds
         for joint_velocity in self.joint_velocities:
             if abs(joint_velocity) > joint_velocity_limit:
@@ -208,7 +329,15 @@ class Robot:
 
     # Compute holding torque from current configuration
     def calc_holding_torque(self):
+
+        '''
+        Computes the holding torque to be applied at each joint to hold the manipulator in place at its current configuration.
+            Returns:
+                holding_torque : a list of torque values to be applied at each joint to hold the current configuration
+        '''
+        
         g = 9.81
+
         if self.num_links == 1:
             tau1 = self.link_masses[0]*g*(self.link_lengths[0]*np.cos(self.joint_angles[0]))
             holding_torque = [tau1]
@@ -221,11 +350,19 @@ class Robot:
             tau2 = self.link_masses[1]*g*(self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1])) + self.link_masses[2]*g*(self.link_lengths[1]*np.cos(self.joint_angles[0] + self.joint_angles[1]) + self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2]))
             tau3 = self.link_masses[2]*g*(self.link_lengths[2]*np.cos(self.joint_angles[0] + self.joint_angles[1] + self.joint_angles[2]))
             holding_torque = [tau1, tau2, tau3]
+        
         return holding_torque
     
 
-    # Display an animation of the robot's motion
     def visualize(self, joint_angles, obstacles, timestep):
+
+        '''
+        Display a visualization plot of the manipulator for a specified configuration.
+            Arguments:
+                joint_angles : a list of joint angles specifying the configuration of the manipulator to show
+                obstacles : a list of polygonal obstacles to illustrate in the workspace
+                timestep : the length of time to display the plot
+        '''
 
         # Clear the plot
         ax.clear()

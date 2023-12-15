@@ -5,12 +5,23 @@ from shapely.geometry.polygon import Polygon
 
 
 def is_in_polygon(point, polygon):
+
+    '''
+    Check if a 2D point is inside any of the polygons.
+    '''
+
     p = Point(point[0], point[1])
     poly = Polygon(polygon)
     return poly.contains(p)
 
 
 def endpoints_to_edges(corners, closed=False):
+    
+    '''
+    Convert corner points [p1, p2, p3, ..., pn]
+        to closed loop polygon edges [(p1, p2), (p2, p3), ..., (pn, p1)].
+    '''
+
     # Get the edges from endpoints
     edges = []
     for i in range(len(corners) - 1):
@@ -23,14 +34,17 @@ def endpoints_to_edges(corners, closed=False):
 
 
 def angle_diff(angle1, angle2, absolute=True):
-    """Calculate the min difference between two angles ranged in [-pi, pi]
-    arguments:
-        angle1: from angle1
-        angle2: to angle2
-        abs: if return the absolute value of the difference,
-             if so, the result is always positive and ranges in [0, pi]
-             else, it will return the signed difference from angle1 to angle2
-    """
+    
+    '''
+    Calculate the min difference between two angles ranged in [-pi, pi].
+        Arguments:
+            angle1 : from angle1
+            angle2 : to angle2
+            abs : if return the absolute value of the difference,
+                if so, the result is always positive and ranges in [0, pi]
+                else, it will return the signed difference from angle1 to angle2
+    '''
+
     angle_diff = angle2 - angle1
 
     # Calculate the absolute difference
@@ -51,6 +65,11 @@ def angle_diff(angle1, angle2, absolute=True):
 
 
 def interpolate_angle(angle1, angle2, num):
+    
+    '''
+    Interpolate between two angles.
+    '''
+    
     # Calculate the step size from angle1 to angle2
     step_size = angle_diff(angle1, angle2, absolute=False) / (num - 1)
 
@@ -64,11 +83,27 @@ def interpolate_angle(angle1, angle2, num):
 
 
 def wrap_to_pi(angle):
+    
+    '''
+    Wrap an angle to the range [-pi, pi].
+    '''
+    
     angle = (angle + np.pi) % (2 * np.pi) - np.pi
     return angle
 
 
 def line_intersection(line1, line2):
+    
+    '''
+    Check if two lines intersect.
+        Arguments:
+            line1 : a line defined by two endpoints [(x1, y1), (x2, y2)]
+            line2 : a line defined by two endpoints [(x1, y1), (x2, y2)]
+        Returns:
+            Intersection point (x, y) if intersect
+            None if not intersect
+    '''
+    
     # Intersection between line(p1, p2) and line(p3, p4)
     x1, y1 = line1[0][0], line1[0][1]
     x2, y2 = line1[1][0], line1[1][1]
@@ -95,6 +130,16 @@ def line_intersection(line1, line2):
 
 
 def is_intersecting(L1, L2):
+    
+    '''
+    Find if an intersection point exists between two set of lines.
+        Arguments:
+            L1 : a list of lines
+            L2 : a list of lines
+        Returns:
+            True if lines intersect
+    '''
+    
     x = []
     y = []
     for l1 in L1:
@@ -106,6 +151,19 @@ def is_intersecting(L1, L2):
 
 
 def rotate_about_origin(x,y,theta):
+
+    '''
+    Transform a point by a rotation about the origin.
+        Arguments:
+            x : the x-coordiante of the point
+            y : the y-coordinate of the point
+            theta: the angle of rotation
+        Returns:
+            newX : the new x-coordiante after the rotation
+            newY : the new y-coordinate after the rotation
+    '''
+    
     newX = x * math.cos(theta) - y * math.sin(theta)
     newY = x * math.sin(theta) + y * math.cos(theta)
     return(newX, newY)
+
