@@ -10,8 +10,8 @@ class Node:
     ''' 
     RRT Node object. 
         Attributes:
-            state : 1 x 6 np.array of floats representing theta1, 2, 3, omega 1, 2, 3
-            t1, t2, t3, w1, w2, w3 : values for each state (deprecated?)
+            state : 1 x 6 np.array of floats representing theta 1, 2, 3, omega 1, 2, 3
+            t1, t2, t3, w1, w2, w3 : values for each angle, angular velocity in state 
             parent : Node associated with this Node's parent
             torques_req : 1 x 3 float of torques needed to move to this Node
             plotting_poses : for visualizations: n x 6 array of floats representing slices of our simulation (from the previous Node, to this Node) to be able to plot when we're done
@@ -58,7 +58,7 @@ class RRT:
     def __init__(self, robot, map, goal, start=None):
         self.robot = robot          # robot class as defined in Robot_Util
         self.map = map              # Map2D object for collision checking
-        self.tree = []              # list of nodes as they're added  # TODO: rename 'tree' to RRTtree
+        self.tree = []              # list of nodes as they're added
         # self.start = Node([*robot.joint_angles[:3], *robot.joint_velocities[:3]], [*robot.joint_angles[:3], *robot.joint_velocities[:3]]) if start.any()==None else Node([*start])  # start pose of robot if given. o/w whatever state the robot is in now.  #TODO: Fix this because it's creating numpy arrays within arrays ;(
         self.start = Node(start, # node state
                           [start, start]) # plotting poses
@@ -72,7 +72,7 @@ class RRT:
         self.kdtree = KDTree(np.vstack((self.start.state,self.start.state))) 
         print(self.kdtree)
         self.tree.append(self.start)
-        print(f"also, I added start and goal to our self.tree: {self.tree}")
+        print(f"added start and goal to our self.tree: {self.tree}")
 
 
     def run(self, n_samples = 100, n_iterations = 10):
@@ -86,7 +86,7 @@ class RRT:
                 path : list of nodes in found path
         '''
 
-        print(f"You have reached the main function, lmao")
+        print(f"You have reached the main function")
         print(f"your robot: {Robot}\nyour start: {self.start}\nyour end: {self.goal}\n")
         print(f"Executing {n_samples} samples. Qnew iterations: {n_iterations}")
 
@@ -121,7 +121,7 @@ class RRT:
         print("\nMaximum iterations reached. No path found.\n")
         
 
-    def sample(self, goal_bias = 0.9):
+    def sample(self, goal_bias = 0.2):
 
         ''' 
         Randomly sample the state space.
@@ -134,9 +134,6 @@ class RRT:
         # goal bias
         if np.random.rand() <= goal_bias:
             return self.goal.state
-        
-        # c space limits, TODO: pull these from robot?
-
         
         return np.array([np.random.uniform(0, 2*np.pi), np.random.uniform(0, 2*np.pi), np.random.uniform(0, 2*np.pi),
                np.random.uniform(0, 10), np.random.uniform(0, 10), np.random.uniform(0, 10)])
@@ -246,7 +243,7 @@ class RRT:
             Arguments:
                 node : a tree node to compare against the goal node
             Returns:
-                True if specified node is within the defined threshold distance of the goal
+                sets found flag true if specified node is within the defined threshold distance of the goal
         '''
 
         goal_threshold = 0.05
@@ -270,7 +267,7 @@ class RRT:
                 metric : str specifing a certain distance metric (available: manhattan, euclidean)
                 bias : balance between angle and angular velocity. Higher value biases angle over angular vel
             Returns:
-                Distance between the two nodes' states
+                float, distance between the two nodes' states
         ''' 
 
         match metric:
